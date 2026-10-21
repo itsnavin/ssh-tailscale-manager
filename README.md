@@ -17,6 +17,17 @@ All command output appears in the **Activity log** at the bottom of the window.
 
 > The app asks for administrator rights at startup (UAC) via its manifest (`requireAdministrator`). It needs them to manage services, Windows capabilities, firewall rules and `HKLM\SOFTWARE\OpenSSH`.
 
+## Download
+
+Get `SshTailscaleManager.exe` from the [latest release](https://github.com/itsnavin/ssh-tailscale-manager/releases/latest). It's a self-contained single file, so you don't need to install .NET. Double-click it and accept the UAC prompt.
+
+Releases are built by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) whenever a `v*` tag is pushed:
+
+```powershell
+git tag v1.0.1
+git push origin v1.0.1
+```
+
 ## Requirements
 
 - Windows 10 or 11
