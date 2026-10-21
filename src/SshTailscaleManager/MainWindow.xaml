@@ -1,0 +1,300 @@
+<Window x:Class="SshTailscaleManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SSH + Tailscale Manager" Height="760" Width="1000" MinHeight="560" MinWidth="780"
+        WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="MinWidth" Value="80" />
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,16,6" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ValueBox" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="CopyBox" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#4B5563" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#1F2937" Padding="14,10">
+            <DockPanel>
+                <Button x:Name="RefreshAllButton" DockPanel.Dock="Right" Content="Refresh all" Click="RefreshAll_Click" Margin="0" VerticalAlignment="Center" />
+                <StackPanel>
+                    <TextBlock Text="SSH + Tailscale Manager" Foreground="White" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock x:Name="HeaderStatus" Foreground="#D1D5DB" Text="Loading…" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <ProgressBar x:Name="BusyBar" Width="120" Height="12" IsIndeterminate="True" Visibility="Collapsed" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock x:Name="BusyText" Text="Ready" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Expander DockPanel.Dock="Bottom" Header="Activity log" IsExpanded="True" Margin="10,0,10,6">
+            <TextBox x:Name="LogBox" Height="140" IsReadOnly="True" FontFamily="Consolas" TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+        </Expander>
+
+        <TabControl x:Name="MainTabs" Margin="10">
+            <!-- ============ SSH SERVER ============ -->
+            <TabItem Header="SSH Server">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <GroupBox Header="OpenSSH Server status">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="Windows capability" />
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="SshCapabilityText" Style="{StaticResource ValueBox}" Text="…" />
+                                <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="sshd service" />
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="SshServiceText" Style="{StaticResource ValueBox}" Text="…" />
+                                <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Startup type" />
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="SshStartupText" Style="{StaticResource ValueBox}" Text="…" />
+                                <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="Listening port" />
+                                <TextBox Grid.Row="3" Grid.Column="1" x:Name="SshPortText" Style="{StaticResource ValueBox}" Text="…" />
+                                <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Firewall rule" />
+                                <TextBox Grid.Row="4" Grid.Column="1" x:Name="SshFirewallText" Style="{StaticResource ValueBox}" Text="…" />
+                                <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="Default shell" />
+                                <TextBox Grid.Row="5" Grid.Column="1" x:Name="SshShellText" Style="{StaticResource ValueBox}" Text="…" />
+                            </Grid>
+                        </GroupBox>
+
+                        <GroupBox Header="Service">
+                            <WrapPanel>
+                                <Button x:Name="InstallSshButton" Content="Install OpenSSH Server" Click="InstallSsh_Click" />
+                                <Button x:Name="StartSshButton" Content="Start" Click="StartSsh_Click" />
+                                <Button x:Name="StopSshButton" Content="Stop" Click="StopSsh_Click" />
+                                <Button x:Name="RestartSshButton" Content="Restart" Click="RestartSsh_Click" />
+                                <Button Content="Start automatically at boot" Click="AutoStart_Click" />
+                                <Button Content="Set to manual start" Click="ManualStart_Click" />
+                                <Button Content="Open sshd_config" Click="OpenConfig_Click" />
+                                <Button Content="Refresh" Click="RefreshSsh_Click" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Windows Firewall">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Allows inbound connections to the sshd port. Tailscale traffic arrives on the Tailscale network adapter and also needs this rule." />
+                                <WrapPanel>
+                                    <Button Content="Allow SSH through firewall" Click="FirewallEnable_Click" />
+                                    <Button Content="Block (disable rule)" Click="FirewallDisable_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Default shell for SSH sessions">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Sets HKLM\SOFTWARE\OpenSSH\DefaultShell. Applies to new SSH sessions." />
+                                <StackPanel Orientation="Horizontal">
+                                    <ComboBox x:Name="ShellCombo" Width="280" Margin="0,0,8,8" VerticalAlignment="Top" />
+                                    <Button Content="Apply" Click="ApplyShell_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ TAILSCALE ============ -->
+            <TabItem Header="Tailscale">
+                <DockPanel Margin="10">
+                    <GroupBox DockPanel.Dock="Top" Header="This device">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="State" />
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="TsStateText" Style="{StaticResource ValueBox}" Text="…" />
+                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Hostname" />
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="TsHostText" Style="{StaticResource ValueBox}" Text="…" />
+                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="MagicDNS name" />
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="TsDnsText" Style="{StaticResource ValueBox}" Text="…" />
+                            <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="Tailscale IPs" />
+                            <TextBox Grid.Row="3" Grid.Column="1" x:Name="TsIpsText" Style="{StaticResource ValueBox}" Text="…" />
+                            <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Tailnet" />
+                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="TsTailnetText" Style="{StaticResource ValueBox}" Text="…" />
+                        </Grid>
+                    </GroupBox>
+
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button x:Name="TsUpButton" Content="Connect (tailscale up)" Click="TailscaleUp_Click" />
+                        <Button x:Name="TsDownButton" Content="Disconnect (tailscale down)" Click="TailscaleDown_Click" />
+                        <Button Content="Refresh" Click="RefreshTailscale_Click" />
+                        <Button Content="Open admin console" Click="TailscaleAdmin_Click" />
+                    </WrapPanel>
+
+                    <GroupBox Header="Devices on your tailnet">
+                        <DataGrid x:Name="PeersGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                  CanUserAddRows="False" MinHeight="120">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Host" Binding="{Binding HostName}" Width="*" />
+                                <DataGridTextColumn Header="Tailscale IP" Binding="{Binding Ip}" Width="140" />
+                                <DataGridTextColumn Header="MagicDNS name" Binding="{Binding DnsName}" Width="2*" />
+                                <DataGridTextColumn Header="OS" Binding="{Binding Os}" Width="90" />
+                                <DataGridTextColumn Header="Online" Binding="{Binding Online}" Width="70" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ============ CONNECT ============ -->
+            <TabItem Header="Connect (Termius)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <GroupBox Header="Connection details">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="Host (Tailscale IP)" />
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="ConnTsIpText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="0" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnTsIpText}" />
+
+                                <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Host (MagicDNS)" />
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="ConnDnsText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="1" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnDnsText}" />
+
+                                <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Host (LAN IP)" />
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="ConnLanText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnLanText}" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ConnLanOtherText" Style="{StaticResource Hint}" />
+
+                                <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Port" />
+                                <TextBox Grid.Row="4" Grid.Column="1" x:Name="ConnPortText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="4" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnPortText}" />
+
+                                <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="Username" />
+                                <TextBox Grid.Row="5" Grid.Column="1" x:Name="ConnUserText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="5" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnUserText}" />
+
+                                <TextBlock Grid.Row="6" Style="{StaticResource FieldLabel}" Text="ssh command" />
+                                <TextBox Grid.Row="6" Grid.Column="1" x:Name="ConnCmdText" Style="{StaticResource CopyBox}" />
+                                <Button Grid.Row="6" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=ConnCmdText}" />
+                            </Grid>
+                        </GroupBox>
+
+                        <GroupBox Header="Setting up Termius on Android">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Text="1. Install Tailscale on the phone and sign in to the same tailnet." />
+                                <TextBlock Style="{StaticResource Hint}" Text="2. In Termius: Hosts → + → New Host. Use the Tailscale IP or MagicDNS name above as Hostname (works from anywhere), or the LAN IP when on the same Wi-Fi." />
+                                <TextBlock Style="{StaticResource Hint}" Text="3. Enter the port and username above. Use your Windows account password, or (recommended) generate a key in Termius → Keychain and add its public key on the Authorized keys tab." />
+                                <TextBlock x:Name="ConnUserHintText" Style="{StaticResource Hint}" />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ KEYS ============ -->
+            <TabItem Header="Authorized keys">
+                <DockPanel Margin="10">
+                    <GroupBox DockPanel.Dock="Top" Header="Key file">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <RadioButton x:Name="AdminKeysRadio" GroupName="KeyTarget" Content="administrators_authorized_keys (admin accounts)"
+                                             Margin="0,0,20,0" Checked="KeyTarget_Changed" />
+                                <RadioButton x:Name="UserKeysRadio" GroupName="KeyTarget" Content="My ~/.ssh/authorized_keys (standard accounts)"
+                                             Checked="KeyTarget_Changed" />
+                            </StackPanel>
+                            <TextBox x:Name="KeysPathText" Style="{StaticResource ValueBox}" FontFamily="Consolas" />
+                            <TextBlock x:Name="KeyHintText" Style="{StaticResource Hint}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox DockPanel.Dock="Bottom" Header="Add public key">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Text="Paste one or more public keys (e.g. from Termius → Keychain → key → Export/Copy public key). Never paste a private key." />
+                            <TextBox x:Name="NewKeyBox" Height="70" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas"
+                                     VerticalScrollBarVisibility="Auto" Margin="0,0,0,8" />
+                            <WrapPanel>
+                                <Button Content="Add key" Click="AddKey_Click" />
+                                <Button Content="Load .pub file…" Click="LoadKeyFile_Click" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Installed keys">
+                        <DockPanel>
+                            <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                <Button Content="Remove selected" Click="RemoveKey_Click" />
+                                <Button Content="Fix permissions &amp; encoding" Click="FixAcl_Click" />
+                                <Button Content="Show in Explorer" Click="OpenKeysFolder_Click" />
+                                <Button Content="Reload" Click="ReloadKeys_Click" />
+                            </WrapPanel>
+                            <ListBox x:Name="KeysList" FontFamily="Consolas" MinHeight="80" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </GroupBox>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
