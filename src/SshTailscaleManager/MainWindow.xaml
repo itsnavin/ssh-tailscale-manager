@@ -2,52 +2,19 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SSH + Tailscale Manager" Height="760" Width="1000" MinHeight="560" MinWidth="780"
-        WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
-    <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="Padding" Value="12,5" />
-            <Setter Property="MinWidth" Value="80" />
-        </Style>
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,10" />
-            <Setter Property="Padding" Value="8" />
-        </Style>
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,0,16,6" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="ValueBox" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-        <Style x:Key="CopyBox" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="FontFamily" Value="Consolas" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Padding" Value="4" />
-            <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="Hint" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#4B5563" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-            <Setter Property="Margin" Value="0,0,0,8" />
-        </Style>
-    </Window.Resources>
+        WindowStartupLocation="CenterScreen" Loaded="Window_Loaded"
+        Background="{DynamicResource WindowBg}" Foreground="{DynamicResource TextBrush}">
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="#1F2937" Padding="14,10">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBg}" Padding="14,10">
             <DockPanel>
                 <Button x:Name="RefreshAllButton" DockPanel.Dock="Right" Content="Refresh all" Click="RefreshAll_Click" Margin="0" VerticalAlignment="Center" />
+                <ComboBox x:Name="ThemeCombo" DockPanel.Dock="Right" Width="110" Margin="0,0,12,0" VerticalAlignment="Center"
+                          ToolTip="Colour theme (System follows your Windows app mode)" />
+                <TextBlock DockPanel.Dock="Right" Text="Theme" Foreground="{DynamicResource HeaderSubTextBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
                 <StackPanel>
-                    <TextBlock Text="SSH + Tailscale Manager" Foreground="White" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock x:Name="HeaderStatus" Foreground="#D1D5DB" Text="Loading…" />
+                    <TextBlock Text="SSH + Tailscale Manager" Foreground="{DynamicResource HeaderTextBrush}" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock x:Name="HeaderStatus" Foreground="{DynamicResource HeaderSubTextBrush}" Text="Loading…" />
                 </StackPanel>
             </DockPanel>
         </Border>

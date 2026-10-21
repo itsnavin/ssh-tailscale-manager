@@ -1,0 +1,40 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Dark palette. Keys must match Light.xaml. -->
+    <SolidColorBrush x:Key="WindowBg" Color="#111318" />
+    <SolidColorBrush x:Key="SurfaceBg" Color="#1A1D23" />
+    <SolidColorBrush x:Key="CardBg" Color="#20242B" />
+    <SolidColorBrush x:Key="InputBg" Color="#15181D" />
+    <SolidColorBrush x:Key="ControlBg" Color="#2A2F37" />
+    <SolidColorBrush x:Key="ControlHoverBg" Color="#353B45" />
+    <SolidColorBrush x:Key="ControlPressedBg" Color="#404754" />
+    <SolidColorBrush x:Key="TextBrush" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="SubtleTextBrush" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#6B7280" />
+    <SolidColorBrush x:Key="BorderBrush" Color="#3A404A" />
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="#5B6270" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="SelectionBg" Color="#1E3A5F" />
+    <SolidColorBrush x:Key="HeaderBg" Color="#0B0D11" />
+    <SolidColorBrush x:Key="HeaderTextBrush" Color="#F9FAFB" />
+    <SolidColorBrush x:Key="HeaderSubTextBrush" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="HeaderCellBg" Color="#262B33" />
+    <SolidColorBrush x:Key="StatusBg" Color="#0F1115" />
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="#1A1D23" />
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#4B5260" />
+    <SolidColorBrush x:Key="GoodBrush" Color="#4ADE80" />
+    <SolidColorBrush x:Key="BadBrush" Color="#F87171" />
+
+    <!-- Override system colours used by stock templates (context menus, scroll corners, selection). -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#15181D" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#1A1D23" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#6B7280" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#1E3A5F" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#F9FAFB" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#2A2F37" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#20242B" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#E5E7EB" />
+</ResourceDictionary>

@@ -10,9 +10,6 @@ namespace SshTailscaleManager;
 
 public partial class MainWindow : Window
 {
-    private static readonly Brush GoodBrush = new SolidColorBrush(Color.FromRgb(0x15, 0x80, 0x3D));
-    private static readonly Brush BadBrush = new SolidColorBrush(Color.FromRgb(0xB9, 0x1C, 0x1C));
-
     private SshStatus? _ssh;
     private TailscaleStatus? _ts;
 
@@ -22,9 +19,22 @@ public partial class MainWindow : Window
         ShellCombo.ItemsSource = SshService.GetShellOptions();
         ShellCombo.SelectedIndex = 0;
 
+        ThemeCombo.ItemsSource = Enum.GetValues<AppTheme>();
+        ThemeCombo.SelectedItem = ThemeManager.Preference;
+        ThemeCombo.SelectionChanged += (_, _) =>
+        {
+            if (ThemeCombo.SelectedItem is AppTheme theme) ThemeManager.SetPreference(theme);
+        };
+
         // Default to the file sshd actually reads for this account.
         if (KeyService.IsCurrentUserAdmin()) AdminKeysRadio.IsChecked = true;
         else UserKeysRadio.IsChecked = true;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        ThemeManager.ApplyTitleBar(this);
     }
 
     private KeyTarget CurrentKeyTarget => AdminKeysRadio.IsChecked == true ? KeyTarget.Administrators : KeyTarget.User;
@@ -402,12 +412,9 @@ public partial class MainWindow : Window
     private static void SetStatus(TextBox box, string text, bool? good)
     {
         box.Text = text;
-        box.Foreground = good switch
-        {
-            true => GoodBrush,
-            false => BadBrush,
-            null => SystemColors.ControlTextBrush,
-        };
+        // Resource references so status colours follow theme switches.
+        if (good is null) box.ClearValue(ForegroundProperty);
+        else box.SetResourceReference(ForegroundProperty, good.Value ? "GoodBrush" : "BadBrush");
     }
 
     private static string FormatStartMode(string mode) => mode switch

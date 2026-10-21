@@ -13,6 +13,8 @@ A small Windows desktop app (WPF, .NET 8) for managing the **Windows OpenSSH Ser
 
 All command output appears in the **Activity log** at the bottom of the window.
 
+**Dark mode:** use the **Theme** picker in the header to choose **System** (follows the Windows *app mode* setting and updates live), **Light** or **Dark**. The title bar follows the theme too. Your choice is saved in `%APPDATA%\SshTailscaleManager\settings.json`.
+
 > The app asks for administrator rights at startup (UAC) via its manifest (`requireAdministrator`). It needs them to manage services, Windows capabilities, firewall rules and `HKLM\SOFTWARE\OpenSSH`.
 
 ## Requirements
@@ -62,7 +64,11 @@ SshTailscaleManager.sln
 src/SshTailscaleManager/
   app.manifest              requireAdministrator
   MainWindow.xaml(.cs)      UI
+  Themes/
+    Light.xaml, Dark.xaml   colour palettes (same brush keys)
+    Controls.xaml           themed control styles
   Services/
+    ThemeManager.cs         System/Light/Dark switching, saved preference, dark title bar
     ProcessRunner.cs        process / PowerShell execution
     SshService.cs           sshd capability, service, firewall, default shell
     TailscaleService.cs     tailscale.exe status / up / down
