@@ -96,7 +96,69 @@ public static class TailscaleService
         }
     }
 
-    public static Task<ProcessResult> UpAsync() => RunAsync("up");
+    /// <summary>
+    /// Brings Tailscale up and waits until the backend really reports Running. Makes sure the Tailscale
+    /// Windows service is running, and falls back to launching the Tailscale tray app (de-elevated)
+    /// when the backend doesn't come up on its own.
+    /// </summary>
+    public static async Task<ProcessResult> UpAsync()
+    {
+        var exe = FindExecutable();
+        if (exe is null) return ProcessResult.Fail("tailscale.exe was not found. Install Tailscale from https://tailscale.com/download.");
+
+        var log = new List<string>();
+        var svc = await ProcessRunner.PowerShellAsync(
+            "$s = Get-Service -Name Tailscale -ErrorAction SilentlyContinue; " +
+            "if ($null -eq $s) { 'Tailscale service not found.' } " +
+            "elseif ($s.Status -ne 'Running') { Start-Service Tailscale; 'Started the Tailscale service.' }",
+            TimeSpan.FromSeconds(60));
+        if (svc.Combined.Length > 0) log.Add(svc.Combined);
+
+        // `tailscale up` blocks while waiting for a login, so cap it; the login URL it prints goes to the log.
+        var up = await ProcessRunner.RunAsync(exe, new[] { "up" }, TimeSpan.FromSeconds(25));
+        if (up.Combined.Length > 0) log.Add(up.Combined);
+
+        var status = await WaitForStateAsync(exe, TimeSpan.FromSeconds(20));
+        if (!IsRunningState(status) && !IsNeedsLogin(status))
+        {
+            var gui = Path.Combine(Path.GetDirectoryName(exe)!, "tailscale-ipn.exe");
+            if (File.Exists(gui) && System.Diagnostics.Process.GetProcessesByName("tailscale-ipn").Length == 0)
+            {
+                log.Add("Backend is not running (state: " + status + "). Starting the Tailscale app…");
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{gui}\"") { UseShellExecute = true }); }
+                catch (Exception ex) { log.Add("Could not start the Tailscale app: " + ex.Message); }
+                status = await WaitForStateAsync(exe, TimeSpan.FromSeconds(30));
+            }
+        }
+
+        log.Add("Tailscale state: " + status);
+        var text = string.Join(Environment.NewLine, log);
+        if (IsRunningState(status)) return ProcessResult.Ok(text);
+        if (IsNeedsLogin(status)) return ProcessResult.Fail(text + Environment.NewLine + "Login required: open the URL shown above (or sign in from the Tailscale tray app), then click Refresh.");
+        return ProcessResult.Fail(text);
+    }
+
+    private static bool IsRunningState(string s) => s.Equals("Running", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsNeedsLogin(string s) => s.StartsWith("NeedsLogin", StringComparison.OrdinalIgnoreCase) || s.StartsWith("NeedsMachineAuth", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task<string> WaitForStateAsync(string exe, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        var state = "Unknown";
+        while (true)
+        {
+            var r = await ProcessRunner.RunAsync(exe, new[] { "status", "--json" }, TimeSpan.FromSeconds(10));
+            try
+            {
+                using var doc = JsonDocument.Parse(r.StdOut.Trim());
+                state = Str(doc.RootElement, "BackendState") ?? "Unknown";
+            }
+            catch (JsonException) { state = "Unavailable"; }
+            if (IsRunningState(state) || IsNeedsLogin(state) || DateTime.UtcNow >= deadline) return state;
+            await Task.Delay(1500);
+        }
+    }
 
     public static Task<ProcessResult> DownAsync() => RunAsync("down");
 
