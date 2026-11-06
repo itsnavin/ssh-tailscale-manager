@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SSH + Tailscale Manager
+Comment=Manage OpenSSH server, SSH keys and Tailscale
+Exec=ssh-tailscale-manager
+Icon=ssh-tailscale-manager
+Terminal=false
+Categories=Network;System;Utility;

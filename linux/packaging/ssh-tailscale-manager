@@ -1,0 +1,2 @@
+#!/bin/sh
+exec python3 -c "import sys; sys.path.insert(0, '/usr/lib/ssh-tailscale-manager'); from sshtsm.app import main; main()" "$@"

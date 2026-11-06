@@ -12,7 +12,22 @@ A small Windows desktop app (WPF, .NET 8) for managing the **Windows OpenSSH Ser
 | **Connect (Termius)** | Lists the host (Tailscale IP, MagicDNS name, LAN IP), port and username, plus a ready-made `ssh` command, each with a **Copy** button and setup steps for Termius. |
 | **Authorized keys** | Lists, adds (paste or load a `.pub` file) and removes public keys in `C:\ProgramData\ssh\administrators_authorized_keys` (admin accounts) or `%USERPROFILE%\.ssh\authorized_keys` (standard accounts). Files are always written as UTF-8 without BOM, and their ACLs are fixed the way sshd requires. |
 
+**Export / send the key to another machine** (SSH Key Generation tab): enter user, host and port of the target machine and click **Copy to host** to install the public key in its `~/.ssh/authorized_keys` (a console opens so `ssh` can ask for that machine's password; this is a real ssh connection that you run and watch). **Export to folder…** copies the `.pub` file, and optionally the private key (with a warning; its ACL is restricted), to a folder such as a USB drive.
+
+The exe carries an icon and publisher metadata (company/author `itsnavin`, description, copyright) shown in file properties. It is **not Authenticode code-signed** (that needs a paid certificate), so SmartScreen may still warn.
+
 All command output appears in the **Activity log** at the bottom of the window.
+
+## Linux (Ubuntu / Debian) `.deb`
+
+A Python 3 + tkinter port with the same tabs (SSH Server, SSH Key Generation, Tailscale, Connect, Authorized keys), Activity log and System/Light/Dark theme. Download `ssh-tailscale-manager_<version>_all.deb` from the [latest release](https://github.com/itsnavin/ssh-tailscale-manager/releases/latest) and install it:
+
+```bash
+sudo apt install ./ssh-tailscale-manager_*_all.deb
+ssh-tailscale-manager
+```
+
+Notes: privileged actions (service control, installing `openssh-server`, ufw, Tailscale up/down) prompt through `pkexec`; keys go to `~/.ssh`; "Copy to host" uses `ssh-copy-id` in a terminal window; authorized keys are in `~/.ssh/authorized_keys`. Build it yourself with `bash linux/packaging/build-deb.sh <version>` (needs `dpkg-deb`); run unit tests with `cd linux && python3 -m unittest discover -s tests`. The release workflow runs the tests, builds the deb, installs it and starts the GUI under xvfb. Not tested on a real desktop session or against a live SSH server/Tailscale on Linux.
 
 **Dark mode:** use the **Theme** picker in the header to choose **System** (follows the Windows *app mode* setting and updates live), **Light** or **Dark**. The title bar follows the theme too. Your choice is saved in `%APPDATA%\SshTailscaleManager\settings.json`.
 

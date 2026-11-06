@@ -11,6 +11,19 @@
     <RootNamespace>SshTailscaleManager</RootNamespace>
     <Version>1.0.0</Version>
     <Product>SSH + Tailscale Manager</Product>
+    <Company>itsnavin</Company>
+    <Authors>itsnavin</Authors>
+    <Copyright>Copyright © 2026 itsnavin. MIT License.</Copyright>
+    <Description>Manage the Windows OpenSSH Server, SSH key generation and Tailscale from one window.</Description>
+    <AssemblyTitle>SSH + Tailscale Manager</AssemblyTitle>
+    <PackageProjectUrl>https://github.com/itsnavin/ssh-tailscale-manager</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/itsnavin/ssh-tailscale-manager</RepositoryUrl>
+    <ApplicationIcon>..\..\assets\icon.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\icon.ico" Link="icon.ico" />
+  </ItemGroup>
 
 </Project>

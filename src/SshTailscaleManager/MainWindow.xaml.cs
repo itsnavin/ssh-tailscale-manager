@@ -455,6 +455,8 @@ public partial class MainWindow : Window
         GenAuthTargetText.Text = "Target: " + KeyService.GetPath(CurrentKeyTarget);
         var hasKey = !string.IsNullOrEmpty(GenPubKeyText.Text);
         AddToAuthButton.IsEnabled = hasKey;
+        CopyToHostButton.IsEnabled = hasKey && _genPrivatePath is not null;
+        ExportFolderButton.IsEnabled = hasKey && _genPrivatePath is not null;
         FixPrivAclButton.IsEnabled = hasKey && _genPrivatePath is not null && File.Exists(_genPrivatePath);
 
         var host = _ts?.IsRunning == true && _ts.IPv4 is { } ip ? ip : NetworkInfo.GetLanIPv4Addresses().FirstOrDefault() ?? "HOST";
@@ -462,6 +464,50 @@ public partial class MainWindow : Window
         var priv = _genPrivatePath ?? Path.Combine(SshKeyService.DefaultDirectory, SshKeyService.DefaultFileName(CurrentKeyType));
         GenCmdText.Text = SshKeyService.BuildSshCommand(host, port, Environment.UserName, priv);
         GenConfigText.Text = SshKeyService.BuildConfigSnippet(SshKeyService.SanitizeAlias(Environment.MachineName), host, port, Environment.UserName, priv);
+    }
+
+    private void CopyToHost_Click(object sender, RoutedEventArgs e)
+    {
+        if (_genPrivatePath is null || !File.Exists(_genPrivatePath + ".pub"))
+        {
+            Log("! Generate or select a key first.");
+            return;
+        }
+        if (SshKeyService.FindSshClient() is null)
+        {
+            Log("! ssh.exe was not found. Install the OpenSSH Client first (SSH Key Generation tab).");
+            return;
+        }
+        var user = RemoteUserBox.Text.Trim();
+        var host = RemoteHostBox.Text.Trim();
+        if (!int.TryParse(RemotePortBox.Text.Trim(), out var port)) port = 0;
+        var error = SshKeyService.ValidateRemote(user, host, port);
+        if (error is not null)
+        {
+            Log("! " + error);
+            MessageBox.Show(this, error, "Copy public key to host", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (MessageBox.Show(this,
+                $"Install this public key on {user}@{host}:{port}?\n\nA console window opens and ssh asks for that account's password (typed into ssh, never into this app).",
+                "Copy public key to host", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+
+        StartShell("cmd.exe", SshKeyService.BuildCopyToHostArguments(_genPrivatePath + ".pub", user, host, port));
+        Log($"> Copy public key to {user}@{host}:{port} (follow the prompts in the console window).");
+    }
+
+    private async void ExportToFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_genPrivatePath is null) return;
+        var includePrivate = ExportPrivateCheck.IsChecked == true;
+        if (includePrivate && MessageBox.Show(this,
+                "The private key gives full access to every machine that trusts this key. Only export it to a place you control (e.g. your own USB drive) and delete other copies afterwards. Continue?",
+                "Export private key", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+
+        var dlg = new OpenFolderDialog { Title = "Choose the folder to export the key to" };
+        if (dlg.ShowDialog(this) != true) return;
+        var path = _genPrivatePath;
+        await RunActionAsync("Export key", () => SshKeyService.ExportAsync(path, dlg.FolderName, includePrivate));
     }
 
     private async void FixPrivateAcl_Click(object sender, RoutedEventArgs e)

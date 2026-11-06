@@ -1,7 +1,7 @@
 <Window x:Class="SshTailscaleManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SSH + Tailscale Manager" Height="760" Width="1000" MinHeight="560" MinWidth="780"
+        Title="SSH + Tailscale Manager" Icon="icon.ico" Height="760" Width="1000" MinHeight="560" MinWidth="780"
         WindowStartupLocation="CenterScreen" Loaded="Window_Loaded"
         Background="{DynamicResource WindowBg}" Foreground="{DynamicResource TextBrush}">
 
@@ -187,6 +187,37 @@
                                 <WrapPanel>
                                     <Button x:Name="LoadExistingKeyButton" Content="Use existing key…" Click="UseExistingKey_Click" />
                                     <Button x:Name="FixPrivAclButton" Content="Fix private key permissions" Click="FixPrivateAcl_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Export / send the key to another machine">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Copy to host installs the public key on a remote Linux/macOS/Windows SSH host (like ssh-copy-id): a console opens and asks for that host's password once. After that you can log in with the key." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="80" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="Remote user" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="RemoteUserBox" Margin="0,0,0,8" />
+                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Remote host" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="RemoteHostBox" Margin="0,0,0,8" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource FieldLabel}" Text="Port" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" x:Name="RemotePortBox" Text="22" Margin="0,0,0,8" />
+                                </Grid>
+                                <CheckBox x:Name="ExportPrivateCheck" Margin="0,0,0,8"
+                                          Content="Include the private key when exporting to a folder (keep it secret)" />
+                                <WrapPanel>
+                                    <Button x:Name="CopyToHostButton" Content="Copy public key to host…" Click="CopyToHost_Click" />
+                                    <Button x:Name="ExportFolderButton" Content="Export to folder…" Click="ExportToFolder_Click" />
                                 </WrapPanel>
                             </StackPanel>
                         </GroupBox>

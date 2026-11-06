@@ -32,17 +32,21 @@ public static class SshKeyService
     public static string DefaultFileName(SshKeyType type) => type == SshKeyType.Ed25519 ? "id_ed25519" : "id_rsa";
 
     /// <summary>Finds the Windows OpenSSH client's ssh-keygen.exe (optional Windows feature), then PATH.</summary>
-    public static string? FindSshKeygen()
+    public static string? FindSshKeygen() => FindTool("ssh-keygen.exe");
+
+    public static string? FindSshClient() => FindTool("ssh.exe");
+
+    private static string? FindTool(string exeName)
     {
         var candidates = new List<string>
         {
-            Path.Combine(Environment.SystemDirectory, "OpenSSH", "ssh-keygen.exe"),
+            Path.Combine(Environment.SystemDirectory, "OpenSSH", exeName),
         };
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         candidates.AddRange(path.Split(';', StringSplitOptions.RemoveEmptyEntries)
             .Select(p => p.Trim().Trim('"'))
             .Where(p => p.Length > 0)
-            .Select(p => Path.Combine(p, "ssh-keygen.exe")));
+            .Select(p => Path.Combine(p, exeName)));
         return candidates.FirstOrDefault(File.Exists);
     }
 
@@ -134,6 +138,56 @@ public static class SshKeyService
         var icacls = Path.Combine(Environment.SystemDirectory, "icacls.exe");
         return await ProcessRunner.RunAsync(icacls,
             new[] { privatePath, "/inheritance:r", "/grant:r", $"*{id.User.Value}:F" }, TimeSpan.FromSeconds(30));
+    }
+
+    private static readonly Regex SafeHostRegex = new(@"^[A-Za-z0-9][A-Za-z0-9._:-]*$", RegexOptions.Compiled);
+    private static readonly Regex SafeUserRegex = new(@"^[A-Za-z0-9_][A-Za-z0-9._-]*$", RegexOptions.Compiled);
+
+    /// <summary>Validates "user@host" pieces for the copy-to-host command; returns an error message or null.</summary>
+    public static string? ValidateRemote(string user, string host, int port)
+    {
+        if (!SafeUserRegex.IsMatch(user)) return "Enter the remote username (letters, digits, . _ - only).";
+        if (!SafeHostRegex.IsMatch(host)) return "Enter the host name or IP address (no spaces or special characters).";
+        if (port is < 1 or > 65535) return "The port must be between 1 and 65535.";
+        return null;
+    }
+
+    /// <summary>
+    /// Builds the arguments for "cmd.exe /k" that append the public key to the remote ~/.ssh/authorized_keys over ssh
+    /// (what ssh-copy-id does). It runs in a visible console so ssh can ask for the remote password; nothing is stored here.
+    /// </summary>
+    public static string BuildCopyToHostArguments(string publicKeyPath, string user, string host, int port)
+    {
+        var portPart = port == 22 ? "" : $"-p {port} ";
+        const string remote = "umask 077; mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys";
+        return $"/k type \"{publicKeyPath}\" | ssh {portPart}{user}@{host} \"{remote}\"";
+    }
+
+    /// <summary>Copies the public key (and optionally the private key, with locked-down permissions) to another folder, e.g. a USB drive.</summary>
+    public static async Task<ProcessResult> ExportAsync(string privatePath, string destDir, bool includePrivate)
+    {
+        var publicPath = privatePath + ".pub";
+        if (!File.Exists(publicPath)) return ProcessResult.Fail($"{publicPath} does not exist.");
+        if (string.IsNullOrWhiteSpace(destDir)) return ProcessResult.Fail("Choose a destination folder.");
+        try
+        {
+            Directory.CreateDirectory(destDir);
+            var destPub = Path.Combine(destDir, Path.GetFileName(publicPath));
+            File.Copy(publicPath, destPub, overwrite: true);
+            var message = $"Exported public key to {destPub}.";
+            if (!includePrivate) return ProcessResult.Ok(message);
+
+            if (!File.Exists(privatePath)) return ProcessResult.Fail($"{privatePath} does not exist.");
+            var destPriv = Path.Combine(destDir, Path.GetFileName(privatePath));
+            File.Copy(privatePath, destPriv, overwrite: true);
+            var acl = await FixPrivateKeyPermissionsAsync(destPriv);
+            return ProcessResult.Ok(message + $"{Environment.NewLine}Exported private key to {destPriv}" +
+                                    (acl.Success ? " (readable only by you)." : ". ! Could not restrict its permissions (the destination may not support them)."));
+        }
+        catch (Exception ex)
+        {
+            return ProcessResult.Fail("Export failed: " + ex.Message);
+        }
     }
 
     public static string BuildSshCommand(string host, int port, string user, string privatePath)

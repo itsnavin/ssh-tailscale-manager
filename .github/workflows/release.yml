@@ -43,3 +43,34 @@ jobs:
             --repo '${{ github.repository }}' `
             --title '${{ github.ref_name }}' `
             --generate-notes
+
+  deb:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb openssh-client
+
+      - name: Run Linux tests
+        working-directory: linux
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build .deb
+        run: |
+          version='${{ github.ref_name }}'
+          version="${version#v}"
+          bash linux/packaging/build-deb.sh "$version" dist
+
+      - name: Verify .deb and GUI start
+        run: |
+          dpkg-deb -I dist/*.deb
+          dpkg-deb -c dist/*.deb
+          sudo apt-get install -y ./dist/*.deb
+          xvfb-run -a python3 -c "import sys; sys.path.insert(0,'/usr/lib/ssh-tailscale-manager'); from sshtsm.app import App; a=App(); a.update_idletasks(); a.after(1000,a.destroy); a.mainloop(); print('GUI ok')"
+
+      - name: Upload .deb to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload '${{ github.ref_name }}' dist/*.deb --repo '${{ github.repository }}' --clobber

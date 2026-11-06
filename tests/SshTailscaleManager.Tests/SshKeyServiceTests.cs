@@ -48,6 +48,44 @@ public class SshKeyServiceTests
     }
 
     [Fact]
+    public void RemoteValidationAndCopyCommand()
+    {
+        Assert.Null(SshKeyService.ValidateRemote("pi", "192.168.1.5", 22));
+        Assert.NotNull(SshKeyService.ValidateRemote("a b", "h", 22));
+        Assert.NotNull(SshKeyService.ValidateRemote("u", "h; calc", 22));
+        Assert.NotNull(SshKeyService.ValidateRemote("u", "h&calc", 22));
+        Assert.NotNull(SshKeyService.ValidateRemote("u", "h", 0));
+        var cmd = SshKeyService.BuildCopyToHostArguments(@"C:\k.pub", "pi", "host", 2222);
+        Assert.StartsWith("/k type \"C:\\k.pub\" | ssh -p 2222 pi@host ", cmd);
+        Assert.Contains("authorized_keys", cmd);
+    }
+
+    [Fact]
+    public async Task ExportCopiesPublicAndOptionallyPrivate()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "sshexport-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(dir);
+            var priv = Path.Combine(dir, "k");
+            File.WriteAllText(priv, "PRIVATE");
+            File.WriteAllText(priv + ".pub", "ssh-ed25519 AAAA test");
+            var dest = Path.Combine(dir, "out");
+            var pubOnly = await SshKeyService.ExportAsync(priv, dest, false);
+            Assert.True(pubOnly.Success);
+            Assert.True(File.Exists(Path.Combine(dest, "k.pub")));
+            Assert.False(File.Exists(Path.Combine(dest, "k")));
+            var both = await SshKeyService.ExportAsync(priv, dest, true);
+            Assert.True(both.Success, both.Combined);
+            Assert.Equal("PRIVATE", File.ReadAllText(Path.Combine(dest, "k")));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public void AliasIsSanitized() => Assert.Equal("my-pc-1", SshKeyService.SanitizeAlias(" My PC 1 "));
 
     [Fact]
