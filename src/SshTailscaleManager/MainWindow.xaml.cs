@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         // Default to the file sshd actually reads for this account.
         if (KeyService.IsCurrentUserAdmin()) AdminKeysRadio.IsChecked = true;
         else UserKeysRadio.IsChecked = true;
+        InitKeygenTab();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -178,6 +179,7 @@ public partial class MainWindow : Window
         var sshText = _ssh is null ? "unknown" : _ssh.ServiceExists ? _ssh.ServiceState : "not installed";
         var tsText = _ts is null ? "unknown" : _ts.BackendState + (tsIp is null ? "" : $" ({tsIp})");
         HeaderStatus.Text = $"sshd: {sshText}  ·  port {port}  ·  Tailscale: {tsText}  ·  user: {user}";
+        if (GenCmdText is not null && KeyTypeCombo.SelectedItem is not null) UpdateKeygenInfo();
     }
 
     // ---------- Actions ----------
@@ -308,9 +310,188 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---------- Key generation ----------
+
+    private string? _genPrivatePath;
+
+    private void InitKeygenTab()
+    {
+        KeyTypeCombo.ItemsSource = new[]
+        {
+            new KeyTypeOption(SshKeyType.Ed25519, "Ed25519 (recommended)"),
+            new KeyTypeOption(SshKeyType.Rsa4096, "RSA 4096 (older systems)"),
+        };
+        KeyTypeCombo.DisplayMemberPath = nameof(KeyTypeOption.Label);
+        KeyTypeCombo.SelectedIndex = 0;
+        KeyDirBox.Text = SshKeyService.DefaultDirectory;
+        KeyCommentBox.Text = SshKeyService.DefaultComment();
+        UpdateKeygenAvailability();
+        UpdateKeygenInfo();
+    }
+
+    private sealed record KeyTypeOption(SshKeyType Type, string Label);
+
+    private SshKeyType CurrentKeyType => (KeyTypeCombo.SelectedItem as KeyTypeOption)?.Type ?? SshKeyType.Ed25519;
+
+    private void KeyType_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (KeyNameBox is null) return;
+        var current = KeyNameBox.Text.Trim();
+        if (current.Length == 0 || current == SshKeyService.DefaultFileName(SshKeyType.Ed25519) || current == SshKeyService.DefaultFileName(SshKeyType.Rsa4096))
+            KeyNameBox.Text = SshKeyService.DefaultFileName(CurrentKeyType);
+    }
+
+    private void UpdateKeygenAvailability()
+    {
+        var keygen = SshKeyService.FindSshKeygen();
+        KeygenStatusText.Text = keygen is null
+            ? "ssh-keygen.exe was not found. Install the Windows \"OpenSSH Client\" feature to generate keys."
+            : "Using " + keygen;
+        KeygenInstallPanel.Visibility = keygen is null ? Visibility.Visible : Visibility.Collapsed;
+        GenerateKeyButton.IsEnabled = keygen is not null;
+    }
+
+    private async void InstallClient_Click(object sender, RoutedEventArgs e)
+    {
+        Log("Installing the OpenSSH Client capability can take several minutes…");
+        await RunActionAsync("Install OpenSSH Client", SshKeyService.InstallClientAsync);
+        UpdateKeygenAvailability();
+    }
+
+    private void RecheckKeygen_Click(object sender, RoutedEventArgs e) => UpdateKeygenAvailability();
+
+    private void BrowseKeyDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFolderDialog { Title = "Choose where to save the key", InitialDirectory = KeyDirBox.Text };
+        if (dlg.ShowDialog(this) == true) KeyDirBox.Text = dlg.FolderName;
+    }
+
+    private void OpenKeyFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = KeyDirBox.Text.Trim();
+        if (Directory.Exists(dir)) StartShell("explorer.exe", $"\"{dir}\"");
+        else Log($"! {dir} does not exist yet.");
+    }
+
+    private async void GenerateKey_Click(object sender, RoutedEventArgs e)
+    {
+        var nameError = SshKeyService.ValidateFileName(KeyNameBox.Text);
+        var passError = SshKeyService.ValidatePassphrase(KeyPassBox.Password, KeyPass2Box.Password);
+        if (nameError is not null || passError is not null)
+        {
+            Log("! " + (nameError ?? passError));
+            MessageBox.Show(this, nameError ?? passError, "SSH Key Generation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var dir = KeyDirBox.Text.Trim();
+        var priv = Path.GetFullPath(Path.Combine(dir, KeyNameBox.Text));
+        var overwrite = false;
+        if (File.Exists(priv) || File.Exists(priv + ".pub"))
+        {
+            if (MessageBox.Show(this,
+                    $"A key already exists at:\n{priv}\n\nOverwriting it permanently destroys the old private key; anything that uses it will stop working. Overwrite?",
+                    "Key already exists", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            {
+                Log("Key generation cancelled: existing key kept.");
+                return;
+            }
+            overwrite = true;
+        }
+
+        var request = new KeyGenRequest(CurrentKeyType, dir, KeyNameBox.Text, KeyCommentBox.Text.Trim(), KeyPassBox.Password, overwrite);
+        KeyGenResult? result = null;
+        await RunActionAsync($"Generate {CurrentKeyType} key", async () =>
+        {
+            result = await SshKeyService.GenerateAsync(request);
+            return result.Success ? ProcessResult.Ok(result.Message) : ProcessResult.Fail(result.Message);
+        });
+
+        if (result is { Success: true })
+        {
+            KeyPassBox.Clear();
+            KeyPass2Box.Clear();
+            ShowGeneratedKey(result.PrivatePath, result.PublicKey, result.Fingerprint);
+        }
+    }
+
+    private async void UseExistingKey_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Select a public key (.pub)",
+            Filter = "Public keys (*.pub)|*.pub",
+            InitialDirectory = Directory.Exists(KeyDirBox.Text) ? KeyDirBox.Text : SshKeyService.DefaultDirectory,
+        };
+        if (dlg.ShowDialog(this) != true) return;
+        try
+        {
+            var pub = (await File.ReadAllTextAsync(dlg.FileName)).Trim();
+            if (!KeyService.IsValidKey(pub))
+            {
+                Log("! That file is not a valid OpenSSH public key.");
+                return;
+            }
+            var fp = await SshKeyService.GetFingerprintAsync(dlg.FileName);
+            ShowGeneratedKey(dlg.FileName[..^4], pub, fp);
+        }
+        catch (Exception ex)
+        {
+            Log("! Could not read key: " + ex.Message);
+        }
+    }
+
+    private void ShowGeneratedKey(string privatePath, string publicKey, string fingerprint)
+    {
+        _genPrivatePath = privatePath;
+        GenPrivPathText.Text = privatePath;
+        GenPubKeyText.Text = publicKey;
+        GenFingerprintText.Text = fingerprint;
+        UpdateKeygenInfo();
+    }
+
+    private void UpdateKeygenInfo()
+    {
+        GenAuthTargetText.Text = "Target: " + KeyService.GetPath(CurrentKeyTarget);
+        var hasKey = !string.IsNullOrEmpty(GenPubKeyText.Text);
+        AddToAuthButton.IsEnabled = hasKey;
+        FixPrivAclButton.IsEnabled = hasKey && _genPrivatePath is not null && File.Exists(_genPrivatePath);
+
+        var host = _ts?.IsRunning == true && _ts.IPv4 is { } ip ? ip : NetworkInfo.GetLanIPv4Addresses().FirstOrDefault() ?? "HOST";
+        var port = _ssh?.Port ?? SshService.GetConfiguredPort();
+        var priv = _genPrivatePath ?? Path.Combine(SshKeyService.DefaultDirectory, SshKeyService.DefaultFileName(CurrentKeyType));
+        GenCmdText.Text = SshKeyService.BuildSshCommand(host, port, Environment.UserName, priv);
+        GenConfigText.Text = SshKeyService.BuildConfigSnippet(SshKeyService.SanitizeAlias(Environment.MachineName), host, port, Environment.UserName, priv);
+    }
+
+    private async void FixPrivateAcl_Click(object sender, RoutedEventArgs e)
+    {
+        if (_genPrivatePath is null) return;
+        var path = _genPrivatePath;
+        await RunActionAsync("Restrict private key permissions", () => SshKeyService.FixPrivateKeyPermissionsAsync(path));
+    }
+
+    private async void AddGeneratedToAuthorized_Click(object sender, RoutedEventArgs e)
+    {
+        var pub = GenPubKeyText.Text;
+        var ok = await RunActionAsync("Add generated public key to authorized keys", () => KeyService.AddKeysAsync(CurrentKeyTarget, pub));
+        RefreshKeys();
+        if (ok) Log("Tip: the Connect tab shows the host details to use with this key.");
+    }
+
+    private void GoToAuthorizedKeys_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = MainTabs.Items.OfType<TabItem>().FirstOrDefault(t => t.Header as string == "Authorized keys");
+        if (tab is not null) MainTabs.SelectedItem = tab;
+    }
+
     // ---------- Keys ----------
 
-    private void KeyTarget_Changed(object sender, RoutedEventArgs e) => RefreshKeys();
+    private void KeyTarget_Changed(object sender, RoutedEventArgs e)
+    {
+        RefreshKeys();
+        if (GenAuthTargetText is not null) UpdateKeygenInfo();
+    }
 
     private void ReloadKeys_Click(object sender, RoutedEventArgs e) => RefreshKeys();
 

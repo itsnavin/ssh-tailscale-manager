@@ -18,6 +18,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Run tests
+        run: dotnet test SshTailscaleManager.sln -c Release
+
       - name: Publish self-contained single-file exe
         shell: pwsh
         run: |

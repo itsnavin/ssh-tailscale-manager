@@ -7,6 +7,7 @@ A small Windows desktop app (WPF, .NET 8) for managing the **Windows OpenSSH Ser
 | Tab | What it does |
 | --- | --- |
 | **SSH Server** | Shows whether the OpenSSH Server capability is installed, the sshd service state, its startup type, the listening port, the firewall rule and the default shell. Buttons install the capability, start/stop/restart sshd, switch between automatic and manual start, allow/block port 22 (or your configured port) in Windows Firewall, open `sshd_config`, and set the default SSH shell (cmd, Windows PowerShell, or PowerShell 7). |
+| **SSH Key Generation** | Creates an SSH key pair locally with Windows' `ssh-keygen.exe` (OpenSSH Client): **Ed25519** (default) or **RSA 4096**, optional comment and passphrase, any folder/file name (default `%USERPROFILE%\.ssh`). It never overwrites an existing key without confirmation, locks the private key down to your user with `icacls`, and shows the public key and SHA256 fingerprint with **Copy** buttons. One click adds the public key to the Authorized keys file for this PC, and it shows a ready-made `ssh -i` command and `~/.ssh/config` snippet plus guidance for Termius on a phone. If the OpenSSH Client isn't installed, a button installs it. Private keys and passphrases stay on this PC and are never logged. Note: `ssh-keygen` only accepts a passphrase as a command-line argument, so it is briefly visible to other processes running on this PC while the key is generated. |
 | **Tailscale** | Shows the backend state, hostname, MagicDNS name, Tailscale IPs, tailnet and the other devices on your tailnet (from `tailscale status --json`). Buttons run `tailscale up` and `tailscale down` and open the admin console. |
 | **Connect (Termius)** | Lists the host (Tailscale IP, MagicDNS name, LAN IP), port and username, plus a ready-made `ssh` command, each with a **Copy** button and setup steps for Termius. |
 | **Authorized keys** | Lists, adds (paste or load a `.pub` file) and removes public keys in `C:\ProgramData\ssh\administrators_authorized_keys` (admin accounts) or `%USERPROFILE%\.ssh\authorized_keys` (standard accounts). Files are always written as UTF-8 without BOM, and their ACLs are fixed the way sshd requires. |
@@ -86,6 +87,13 @@ src/SshTailscaleManager/
     KeyService.cs           authorized_keys management + ACL fixes
     NetworkInfo.cs          LAN IPv4 discovery
 ```
+
+## Tests
+
+```powershell
+dotnet test
+```n
+Unit tests live in `tests/SshTailscaleManager.Tests` (file-name/passphrase validation, ssh-keygen arguments, snippets, and a real key generation when `ssh-keygen.exe` is available). They don't connect to any SSH server.
 
 ## License
 

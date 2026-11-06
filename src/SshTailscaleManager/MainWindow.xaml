@@ -105,6 +105,132 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- ============ KEY GENERATION ============ -->
+            <TabItem Header="SSH Key Generation">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <GroupBox Header="Generate a new key pair">
+                            <StackPanel>
+                                <TextBlock x:Name="KeygenStatusText" Style="{StaticResource Hint}" />
+                                <WrapPanel x:Name="KeygenInstallPanel" Visibility="Collapsed">
+                                    <Button Content="Install OpenSSH Client" Click="InstallClient_Click" />
+                                    <Button Content="Re-check" Click="RecheckKeygen_Click" />
+                                </WrapPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="Key type" />
+                                    <ComboBox Grid.Row="0" Grid.Column="1" x:Name="KeyTypeCombo" Width="320" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                              SelectionChanged="KeyType_Changed" />
+
+                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Folder" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="KeyDirBox" Margin="0,0,0,8" FontFamily="Consolas" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="Browse…" Click="BrowseKeyDir_Click" VerticalAlignment="Top" />
+
+                                    <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="File name" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="KeyNameBox" Margin="0,0,0,8" FontFamily="Consolas" />
+
+                                    <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="Comment" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="KeyCommentBox" Margin="0,0,0,8" />
+
+                                    <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Passphrase" />
+                                    <PasswordBox Grid.Row="4" Grid.Column="1" x:Name="KeyPassBox" Margin="0,0,0,8" />
+
+                                    <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="Repeat passphrase" />
+                                    <PasswordBox Grid.Row="5" Grid.Column="1" x:Name="KeyPass2Box" Margin="0,0,0,8" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Leave the passphrase empty for a key without one (needed for unattended use; less safe if the file leaks). Keys are created locally with ssh-keygen; the private key and passphrase never leave this PC and are never written to the Activity log. An existing key is never overwritten without confirmation." />
+                                <WrapPanel>
+                                    <Button x:Name="GenerateKeyButton" Content="Generate key pair" Click="GenerateKey_Click" />
+                                    <Button Content="Open folder" Click="OpenKeyFolder_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Generated key">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="Private key file" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="GenPrivPathText" Style="{StaticResource CopyBox}" />
+                                    <Button Grid.Row="0" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=GenPrivPathText}" />
+
+                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Fingerprint" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="GenFingerprintText" Style="{StaticResource CopyBox}" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=GenFingerprintText}" />
+
+                                    <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Public key" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="GenPubKeyText" Style="{StaticResource CopyBox}" TextWrapping="Wrap" />
+                                    <Button Grid.Row="2" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=GenPubKeyText}" />
+                                </Grid>
+                                <WrapPanel>
+                                    <Button x:Name="LoadExistingKeyButton" Content="Use existing key…" Click="UseExistingKey_Click" />
+                                    <Button x:Name="FixPrivAclButton" Content="Fix private key permissions" Click="FixPrivateAcl_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Use this key to log in to this PC (server side)">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Adds the public key to the Authorized keys file below, so a client holding the private key can sign in to this PC's SSH server. Useful when you log in from this PC itself or copy the key to another device." />
+                                <TextBox x:Name="GenAuthTargetText" Style="{StaticResource ValueBox}" FontFamily="Consolas" />
+                                <WrapPanel>
+                                    <Button x:Name="AddToAuthButton" Content="Add public key to authorized_keys" Click="AddGeneratedToAuthorized_Click" />
+                                    <Button Content="Go to Authorized keys" Click="GoToAuthorizedKeys_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Connecting with this key">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Text="Run on a client that has the private key. Host and port come from the Connect tab." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="ssh command" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="GenCmdText" Style="{StaticResource CopyBox}" />
+                                    <Button Grid.Row="0" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=GenCmdText}" />
+                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="~/.ssh/config" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="GenConfigText" Style="{StaticResource CopyBox}" TextWrapping="Wrap" AcceptsReturn="True" />
+                                    <Button Grid.Row="1" Grid.Column="2" Content="Copy" Click="Copy_Click" Tag="{Binding ElementName=GenConfigText}" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Phone (Termius): the private key must be on the phone. Prefer generating the key inside Termius (Keychain → Generate key) and adding its public key on the Authorized keys tab, so the private key never travels. If you use this key instead, move the private key file to the phone over a trusted channel (USB cable or a local transfer), import it in Termius → Keychain, then delete any copies you no longer need. Never email it or paste it into chats or cloud notes." />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <!-- ============ TAILSCALE ============ -->
             <TabItem Header="Tailscale">
                 <DockPanel Margin="10">
