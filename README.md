@@ -14,7 +14,7 @@ A small Windows desktop app (WPF, .NET 8) for managing the **Windows OpenSSH Ser
 
 **Export / send the key to another machine** (SSH Key Generation tab): enter user, host and port of the target machine and click **Copy to host** to install the public key in its `~/.ssh/authorized_keys` (a console opens so `ssh` can ask for that machine's password; this is a real ssh connection that you run and watch). **Export to folder…** copies the `.pub` file, and optionally the private key (with a warning; its ACL is restricted), to a folder such as a USB drive.
 
-The exe carries an icon and publisher metadata (company/author `itsnavin`, description, copyright) shown in file properties. It is **not Authenticode code-signed** (that needs a paid certificate), so SmartScreen may still warn.
+The exe carries an icon and publisher metadata (company/author `itsnavin`, description, copyright) shown in file properties. It is **not Authenticode code-signed** (that needs a paid certificate), so SmartScreen may still warn and the UAC prompt shows "Unknown publisher" (that text only comes from an Authenticode signature, not file metadata). To sign releases, add repository secrets `CODESIGN_PFX_BASE64` (base64 of your `.pfx` code-signing certificate) and `CODESIGN_PFX_PASSWORD`; the release workflow then signs and verifies the exe automatically. Without them the exe stays unsigned.
 
 All command output appears in the **Activity log** at the bottom of the window.
 
